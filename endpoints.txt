@@ -1,0 +1,28 @@
+------ user-service ------
+POST http://localhost:5000/auth/register
+RAW JSON:
+{
+  "email": "hamza1@example.com",
+  "password": "654321",
+  "interests": ["nature"],
+  "name": "Hamza",
+  "surname": "Kaya"
+}
+
+
+POST http://localhost:5000/auth/login
+
+{
+  "email": "hamza1@example.com",
+  "password": "654321"
+}
+
+PROFİL
+GET http://localhost:5000/auth/me
+
+UPDATE SAYFASI
+GET http://localhost:5000/users/:id	
+PUT http://localhost:5000/users/:id/password
+PUT http://localhost:5000/users/:id/interests
+
+

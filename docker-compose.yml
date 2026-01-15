@@ -1,0 +1,100 @@
+services:
+  db:
+    image: postgres:15
+    container_name: tp-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: tripplanner
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - tp-net
+    restart: unless-stopped
+
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: user-service
+    env_file:
+      - ./user-service/.env
+    environment:
+      PORT: 5000
+      DB_HOST: db
+      DB_PORT: 5432
+    depends_on:
+      - db
+    ports:
+      - "5000:5000"
+    networks:
+      - tp-net
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: tp-redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - tp-net
+    restart: unless-stopped
+
+  places-service:
+    build:
+      context: ./places-service
+      dockerfile: Dockerfile
+    container_name: places-service
+    env_file:
+      - ./places-service/.env
+    environment:
+      NODE_ENV: production
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "5002:5002"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5002/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - tp-net
+    restart: unless-stopped
+
+  trips-service:
+    build:
+      context: ./trips-service
+      dockerfile: Dockerfile
+    container_name: trips-service
+    env_file:
+      - ./trips-service/.env
+    environment:
+      PORT: 5003
+      DB_HOST: db
+      DB_PORT: 5432
+    depends_on:
+      - db
+    ports:
+      - "5003:5003"
+    networks:
+      - tp-net
+    restart: unless-stopped
+
+networks:
+  tp-net:
+
+volumes:
+  redisdata:
